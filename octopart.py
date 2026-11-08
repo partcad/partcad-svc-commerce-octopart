@@ -142,15 +142,19 @@ class Octopart(d.Distributor):
         credentials = self.credentials()
         self.client_id = credentials["client_id"]
         self.client_secret = credentials["client_secret"]
+        # Other addresses for Nexar: servers standing in for its, to test against.
+        parameters = self.request.get("parameters") or {}
+        self.api = str(parameters.get("api") or API)
+        self.token_url = str(parameters.get("identity") or TOKEN)
 
     # -- the wire --
 
     def graphql(self, query, variables, what, ttl=d.PRODUCT_TTL):
         token = self.bearer(
-            TOKEN, self.client_id, self.client_secret, what, extra={"scope": "supply.domain"}, basic=True
+            self.token_url, self.client_id, self.client_secret, what, extra={"scope": "supply.domain"}, basic=True
         )
         answer = self.http.json(
-            API,
+            self.api,
             what,
             headers={"Authorization": "Bearer " + token},
             data={"query": query, "variables": variables},
@@ -333,7 +337,7 @@ class Octopart(d.Distributor):
             return None
         try:
             self.bearer(
-                TOKEN,
+                self.token_url,
                 credentials["client_id"],
                 credentials["client_secret"],
                 "logging in",

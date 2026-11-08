@@ -34,7 +34,7 @@ docs:
     pc login //pub/svc/commerce/octopart:octopart
     pc list packages //pub/svc/commerce/octopart/products...
     pc search parts -P //pub/svc/commerce/octopart/products/discrete-semiconductors/diodes -k bav99
-    pc inspect //pub/svc/commerce/octopart/products:BAV99~nexperia
+    pc info //pub/svc/commerce/octopart/products:BAV99~nexperia
     pc supply quote //pub/svc/commerce/octopart/products:BAV99~nexperia#100
     ```
 
@@ -72,6 +72,18 @@ providers:
         desc: >-
           The Client Secret of your Nexar app. Set by 'pc login', or
           NEXAR_CLIENT_SECRET. Never set it in a package.
+      api:
+        type: string
+        default: ""
+        desc: >-
+          Another address for Nexar's GraphQL API: a server standing in for
+          it, to test against. Empty is api.nexar.com's.
+      identity:
+        type: string
+        default: ""
+        desc: >-
+          Another address for Nexar's token endpoint, with 'api'. Empty is
+          identity.nexar.com's.
 
 repositories:
   octopart_repo:
@@ -92,3 +104,15 @@ repositories:
         desc: >-
           The Client Secret of your Nexar app. Set by 'pc login', or
           NEXAR_CLIENT_SECRET. Never set it in a package.
+      api:
+        type: string
+        default: ""
+        desc: >-
+          Another address for Nexar's GraphQL API: a server standing in for
+          it, to test against. Empty is api.nexar.com's.
+      identity:
+        type: string
+        default: ""
+        desc: >-
+          Another address for Nexar's token endpoint, with 'api'. Empty is
+          identity.nexar.com's.

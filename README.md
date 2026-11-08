@@ -36,7 +36,7 @@ pc login //pub/svc/commerce/octopart:octopart
 ```shell
 pc list packages //pub/svc/commerce/octopart/products...
 pc search parts -P //pub/svc/commerce/octopart/products/discrete-semiconductors/diodes -k bav99
-pc inspect //pub/svc/commerce/octopart/products:BAV99~nexperia
+pc info //pub/svc/commerce/octopart/products:BAV99~nexperia
 pc supply quote //pub/svc/commerce/octopart/products:BAV99~nexperia#100
 ```
 
@@ -66,8 +66,10 @@ it is taken as it is) and takes the cheapest, preferring what is in stock.
 * Nexar's terms keep what it answers for a day at most, forbid sharing a key, and ask for a
   link to Octopart where its data is shown.
 
-Not yet run against the live API: the tests answer it from a table in the shapes of Nexar's
-schema.
+Run end to end in PartCAD 0.9.22 - a search in a category, a part built from the STEP in its
+KiCad library, a quote - against servers standing in for Nexar's (the plugins' `api` and
+`identity` parameters point them there). Not yet against Nexar's own, for want of credentials:
+the tests answer it in the shapes of Nexar's schema, and the queries are validated against it.
 
 ## Tests
 
