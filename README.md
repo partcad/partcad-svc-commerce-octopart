@@ -21,15 +21,29 @@ manufacturer and part number.
 
 ## Setting it up
 
-Sign up at <https://portal.nexar.com>, create an app with the **Supply** scope, and copy its
-Client ID and Client Secret from its Authorization tab. Then:
+Octopart's API is Nexar's, and it answers an app of your own: its part quota is yours.
 
 ```shell
 pc login //pub/svc/commerce/octopart:octopart_repo
 pc login //pub/svc/commerce/octopart:octopart
 ```
 
-(or `NEXAR_CLIENT_ID` and `NEXAR_CLIENT_SECRET`). The token lasts a day and is kept that long.
+opens <https://portal.nexar.com/apps> in PartCAD's browser. Sign in there (an Octopart or
+Altium account will do), create an app with the **Supply** scope if you have none - a scope
+cannot be added afterwards - and open its **Authorization** page. The Client Secret is read off
+that page; paste the Client ID into PartCAD's banner from the page's "Copy Client ID". Both are
+checked with Nexar before they are kept, in `~/.partcad/config.yaml`, by each plugin's name: the
+store and the catalogue are two plugins, so log in to both. Where nobody is at a browser,
+`pc login --agent ... --set client_id=... --set client_secret=...` takes them, and so do
+`NEXAR_CLIENT_ID` and `NEXAR_CLIENT_SECRET`. The token lasts a day and is kept that long.
+
+A new app answers no parts until some are assigned to it under **Manage supply plan**; the
+free evaluation app has 100 for its lifetime.
+
+Why not sign in to Octopart itself? Nexar charges a supply query to the app that makes it, so
+signing users in through an app of PartCAD's would put every user's searches on one quota, and
+that sign-in needs the app's secret, which Nexar's terms forbid publishing. Octopart's own
+site, behind a bot check, is not something to script either.
 
 ## Using it
 

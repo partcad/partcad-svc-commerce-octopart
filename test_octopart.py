@@ -247,3 +247,59 @@ def test_the_shared_module_is_the_one_every_distributor_plugin_has():
     with open(os.path.join(_HERE, "distributor.sha256")) as f:
         expected = f.read().split()[0]
     assert digest == expected, "distributor.py differs from the shared copy: run incubator/_shared/copy.sh"
+
+
+# -- pc login --------------------------------------------------------------------
+
+
+class _Browser:
+    """'partcad_login' with the browser answered: what it was asked, and what it brought back."""
+
+    non_interactive = False
+
+    def __init__(self, captured):
+        self.captured = captured
+        self.asked = []
+
+    def open_browser(self, **spec):
+        self.asked.append(spec)
+        return dict(self.captured)
+
+
+def test_the_login_is_a_request_partcad_takes():
+    """What the browser is asked passes PartCAD's own check, which the extension's mirrors."""
+    plugin_login = pytest.importorskip("plugin_login")
+    made = Octopart({"parameters": {}})
+    spec = plugin_login.browser_spec(**made.login_spec())
+
+    assert spec["url"] == "https://portal.nexar.com/apps"
+    captures = {item["name"]: item for item in spec["capture"]}
+    # The secret is read off the app's Authorization page; the ID is pasted from its 'Copy' button.
+    assert captures["client_secret"]["dom"] == {
+        "url": "https://portal.nexar.com/apps/*/details/authorization",
+        "selector": "input[disabled]",
+        "property": "value",
+    }
+    assert "ask" in captures["client_id"]
+    assert spec["require"] == "all"
+
+
+def test_a_login_checks_what_the_browser_brought_with_nexar(octopart, monkeypatch):
+    made = octopart(client_id="", client_secret="")
+    browser = _Browser({"client_id": "id-12345678", "client_secret": "s" * 32})
+
+    result = d.pm.login(made, browser)
+
+    assert result["parameters"] == {"client_id": "id-12345678", "client_secret": "s" * 32}
+    assert "Logged in" in result["message"] and "Manage supply plan" in result["message"]
+    url, headers, _form = made.http.request.asked[-1]
+    assert url == TOKEN
+    assert base64.b64decode(headers["Authorization"].split()[1]) == b"id-12345678:" + b"s" * 32
+
+
+def test_a_login_nexar_refuses_is_not_saved(octopart):
+    made = octopart(client_id="", client_secret="")
+    made.http.request.table[TOKEN] = (400, {"error": "invalid_client"})
+
+    with pytest.raises(RuntimeError, match="does not take"):
+        d.pm.login(made, _Browser({"client_id": "id-12345678", "client_secret": "wrong" * 4}))

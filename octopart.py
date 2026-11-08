@@ -73,6 +73,8 @@ d = _shared()
 
 API = "https://api.nexar.com/graphql"
 TOKEN = "https://identity.nexar.com/connect/token"
+# Where a user makes the app whose credentials these are, and reads them off.
+PORTAL = "https://portal.nexar.com"
 WEB = "https://octopart.com"
 
 # What every query asks of a part. 'sellers' only where offers are needed: a
@@ -111,7 +113,8 @@ SEPARATOR = "~"
 
 
 def key_of(mpn, manufacturer):
-    return "%s%s%s" % (mpn, SEPARATOR, d.slug(manufacturer))
+    """A part's name: its MPN written as a name, '~', and its manufacturer's slug."""
+    return "%s%s%s" % (d.name_of(mpn), SEPARATOR, d.slug(manufacturer))
 
 
 class Octopart(d.Distributor):
@@ -132,9 +135,11 @@ class Octopart(d.Distributor):
     CAD_SOURCE = "Octopart's CAD partner, in its KiCad library"
     CREDENTIALS = {"client_id": "NEXAR_CLIENT_ID", "client_secret": "NEXAR_CLIENT_SECRET"}
     LOGIN_INSTRUCTIONS = (
-        "Octopart's API is Nexar's, and takes the Client ID and Client Secret of an app of your own. Sign up at "
-        "https://portal.nexar.com, create an app with the Supply scope, and copy its Client ID and Client Secret "
-        "from the app's Authorization tab. The free plan answers a limited number of parts a month."
+        "Octopart's API is Nexar's, and takes the Client ID and Client Secret of an app of your own. Sign in at "
+        "https://portal.nexar.com/apps (an Octopart or Altium account will do), create an app with the Supply "
+        "scope - a scope cannot be added afterwards - and open its Authorization page, where the Client ID and "
+        "the Client Secret are. A new app answers no parts until some are assigned to it under 'Manage supply "
+        "plan'; the free evaluation app has 100 for its lifetime."
     )
 
     def __init__(self, request=None):
@@ -213,8 +218,13 @@ class Octopart(d.Distributor):
     def find_mpn(self, manufacturer, mpn):
         return self.match(mpn, "the offers of %s" % mpn)
 
+    def name_for(self, product):
+        # A part is already named by its name: '<MPN>~<manufacturer>'.
+        return product.sku
+
     def fetch_product(self, sku):
         mpn, separator, maker = sku.rpartition(SEPARATOR) if SEPARATOR in sku else (sku, "", "")
+        mpn = d.sku_of(mpn)
         found = [p for p in self.match(mpn, "part %s" % sku) if d.fold(p.mpn) == d.fold(mpn)]
         if separator:
             found = [p for p in found if d.slug(p.manufacturer) == maker]
@@ -346,16 +356,54 @@ class Octopart(d.Distributor):
             )
         except d.NeedsCredentials:
             return None
-        return "the Nexar app %s..." % credentials["client_id"][:8]
+        return "the Nexar app %s... (if searches find nothing, assign it parts under 'Manage supply plan')" % (
+            credentials["client_id"][:8]
+        )
 
     def login_spec(self):
+        """Sign in to Nexar's portal, and bring back the credentials of an app of the user's own.
+
+        Not a sign-in to Octopart with an app of PartCAD's: Nexar charges a
+        supply query to the app that makes it, so every user's searches would
+        come out of one quota, and its code exchange takes the app's secret,
+        which Nexar's terms forbid publishing. The user's own app has the
+        user's own quota, and its credentials are on its Authorization page
+        whenever it is opened: the secret in a disabled password field, which
+        is read off the page, and the Client ID beside a button that copies it,
+        which the user pastes into the banner.
+        """
         return {
-            "url": "https://portal.nexar.com",
-            "title": "Nexar (Octopart) API",
+            "url": PORTAL + "/apps",
+            "title": "Nexar (Octopart): open your app's Authorization page",
             "capture": [
-                {"name": "client_id", "ask": {"label": "The Client ID of your Nexar app", "secret": False}},
-                {"name": "client_secret", "ask": {"label": "The Client Secret of your Nexar app", "secret": True}},
+                {
+                    "name": "client_id",
+                    "ask": {"label": "The Client ID of your Nexar app ('Copy Client ID')", "secret": False},
+                    "match": r"^\S{8,}$",
+                },
+                {
+                    "name": "client_secret",
+                    "dom": {
+                        "url": PORTAL + "/apps/*/details/authorization",
+                        "selector": "input[disabled]",
+                        "property": "value",
+                    },
+                    "match": r"^\S{16,}$",
+                },
             ],
+            "guide": [
+                {
+                    "url": PORTAL + "/apps*",
+                    "selector": "a[href*='/details/authorization']",
+                    "text": "The Authorization page of an app with the Supply scope has its Client ID and Secret.",
+                },
+                {
+                    "url": PORTAL + "/apps/*/details*",
+                    "selector": "a[href$='/details/authorization']",
+                    "text": "Its credentials are on the Authorization page.",
+                },
+            ],
+            "timeout": 1800,
         }
 
 
